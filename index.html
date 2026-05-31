@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.5);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+
+    body {
+      width: 340px;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+
+    .header {
+      padding: 20px;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 50%);
+      opacity: 0.15;
+      animation: pulse 4s linear infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.1); }
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 svg {
+      width: 20px;
+      height: 20px;
+      color: var(--primary);
+    }
+
+    .container {
+      padding: 16px;
+    }
+
+    #domains {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .domain-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .domain-item:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .domain-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .domain-name {
+      font-weight: 500;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .domain-name img {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    .domain-time {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      background: rgba(59, 130, 246, 0.1);
+      padding: 4px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .domain-category {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: 8px;
+    }
+    
+    .cat-productive { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .cat-wasted { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .cat-neutral { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+
+    .progress-track {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 30px 10px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .analytics-panel {
+      padding: 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .stat-card {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    
+    .stat-value {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .productive-stat .stat-value { color: #10b981; }
+    .wasted-stat .stat-value { color: #ef4444; }
+    
+    .score-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .score-label {
+      font-size: 13px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    
+    .score-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .score-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ef4444, #eab308, #10b981);
+      width: 0%;
+      transition: width 0.5s ease;
+      border-radius: 4px;
+    }
+    
+    .score-value {
+      font-size: 14px;
+      font-weight: 600;
+      width: 40px;
+      text-align: right;
+    }
+    
+    .insights-card {
+      margin: 16px;
+      padding: 16px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 12px;
+    }
+    
+    .insights-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .insights-text {
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <img src="public/tab-summary-icon.png" alt="Logo" style="width: 24px; height: 24px; border-radius: 4px;">
+      Time Tracker
+    </h1>
+  </div>
+  
+  <div class="analytics-panel">
+    <div class="stats-row">
+      <div class="stat-card productive-stat">
+        <div class="stat-label">Productive</div>
+        <div class="stat-value" id="stat-productive">0h 0m</div>
+      </div>
+      <div class="stat-card wasted-stat">
+        <div class="stat-label">Wasted</div>
+        <div class="stat-value" id="stat-wasted">0h 0m</div>
+      </div>
+    </div>
+    
+    <div class="score-container">
+      <div class="score-label">Score</div>
+      <div class="score-bar-bg">
+        <div class="score-bar-fill" id="score-bar"></div>
+      </div>
+      <div class="score-value" id="score-text">0%</div>
+    </div>
+  </div>
+
+  <div class="insights-card">
+    <div class="insights-title">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      AI Insights
+    </div>
+    <div class="insights-text" id="insights-text">Collecting data to generate insights...</div>
+  </div>
+
+  <div class="container">
+    <ul id="domains"></ul>
+  </div>
+  <script type="module" src="dist/popup.js"></script>
+</body>
+</html>
