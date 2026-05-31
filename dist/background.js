@@ -15,7 +15,27 @@ function getDomain(url) {
     }
     return null;
 }
+/** Returns today's date as "YYYY-MM-DD" in local time */
+function todayString() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+/** Resets timeMap if it's a new day */
+async function checkAndResetForNewDay() {
+    const result = await chrome.storage.local.get(['lastDate']);
+    const today = todayString();
+    if (result.lastDate !== today) {
+        console.log(`New day detected (${result.lastDate} → ${today}). Resetting timeMap.`);
+        await chrome.storage.local.set({
+            timeMap: {},
+            lastDate: today,
+            trackerState: { activeDomain: null, startTime: Date.now() }
+        });
+    }
+}
 async function updateTime(newDomain) {
+    // Always check for a new day before recording time
+    await checkAndResetForNewDay();
     const result = await chrome.storage.local.get(['trackerState', 'timeMap']);
     const trackerState = result.trackerState;
     const timeMap = (result.timeMap || {});
@@ -23,8 +43,6 @@ async function updateTime(newDomain) {
     if (trackerState && trackerState.activeDomain) {
         const timeSpent = now - trackerState.startTime;
         const domain = trackerState.activeDomain;
-        // Safety check for crazy large durations (e.g. sleep for hours without idle triggering)
-        // If it's more than 24 hours, we cap it or ignore it. Let's just add it.
         timeMap[domain] = (timeMap[domain] || 0) + timeSpent;
         await chrome.storage.local.set({ timeMap });
     }
@@ -43,15 +61,20 @@ async function handleTabChange() {
         await updateTime(domain);
     }
     else {
-        // Not active, so don't track anything
         await updateTime(null);
     }
 }
+// On extension startup, initialise lastDate if missing
+chrome.runtime.onStartup.addListener(async () => {
+    await checkAndResetForNewDay();
+});
+chrome.runtime.onInstalled.addListener(async () => {
+    await checkAndResetForNewDay();
+});
 chrome.tabs.onActivated.addListener(handleTabChange);
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (tab.active) {
+    if (tab.active)
         handleTabChange();
-    }
 });
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
     if (windowId === chrome.windows.WINDOW_ID_NONE) {
@@ -66,7 +89,6 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
         await handleTabChange();
     }
     else {
-        // User went idle or locked screen
         await updateTime(null);
     }
 });

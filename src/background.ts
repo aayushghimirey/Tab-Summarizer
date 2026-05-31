@@ -20,23 +20,44 @@ function getDomain(url: string | undefined): string | null {
   return null;
 }
 
+/** Returns today's date as "YYYY-MM-DD" in local time */
+function todayString(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Resets timeMap if it's a new day */
+async function checkAndResetForNewDay(): Promise<void> {
+  const result = await chrome.storage.local.get(['lastDate']);
+  const today = todayString();
+
+  if (result.lastDate !== today) {
+    console.log(`New day detected (${result.lastDate} → ${today}). Resetting timeMap.`);
+    await chrome.storage.local.set({
+      timeMap: {},
+      lastDate: today,
+      trackerState: { activeDomain: null, startTime: Date.now() }
+    });
+  }
+}
+
 async function updateTime(newDomain: string | null) {
+  // Always check for a new day before recording time
+  await checkAndResetForNewDay();
+
   const result = await chrome.storage.local.get(['trackerState', 'timeMap']);
   const trackerState = result.trackerState as TrackerState | undefined;
   const timeMap = (result.timeMap || {}) as Record<string, number>;
-  
+
   const now = Date.now();
-  
+
   if (trackerState && trackerState.activeDomain) {
     const timeSpent = now - trackerState.startTime;
     const domain = trackerState.activeDomain;
-    
-    // Safety check for crazy large durations (e.g. sleep for hours without idle triggering)
-    // If it's more than 24 hours, we cap it or ignore it. Let's just add it.
     timeMap[domain] = (timeMap[domain] || 0) + timeSpent;
     await chrome.storage.local.set({ timeMap });
   }
-  
+
   await chrome.storage.local.set({
     trackerState: {
       activeDomain: newDomain,
@@ -52,17 +73,23 @@ async function handleTabChange() {
     const domain = tabs.length > 0 ? getDomain(tabs[0].url) : null;
     await updateTime(domain);
   } else {
-    // Not active, so don't track anything
     await updateTime(null);
   }
 }
 
+// On extension startup, initialise lastDate if missing
+chrome.runtime.onStartup.addListener(async () => {
+  await checkAndResetForNewDay();
+});
+
+chrome.runtime.onInstalled.addListener(async () => {
+  await checkAndResetForNewDay();
+});
+
 chrome.tabs.onActivated.addListener(handleTabChange);
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (tab.active) {
-    handleTabChange();
-  }
+  if (tab.active) handleTabChange();
 });
 
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
@@ -77,7 +104,6 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
   if (newState === 'active') {
     await handleTabChange();
   } else {
-    // User went idle or locked screen
     await updateTime(null);
   }
 });
