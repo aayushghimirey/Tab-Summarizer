@@ -1,29 +1,31 @@
 # ⏱️ Time Tracker — Chrome Extension
 
-Tracks time spent on every website and uses AI to calculate your productive vs wasted hours, give you a productivity score, and personalized advice.
+A beautiful, dark-themed Chrome extension that tracks the time spent on every website you visit in real time. It features a modern, interactive dashboard with global tracking controls and domain management tools.
 
-## 🚀 Setup (3 steps)
+## ✨ Features
 
-### 1. Get a free API key
-Go to [openrouter.ai](https://openrouter.ai), sign up, and copy your API key.
+- **Real-Time Tracking**: Accurately tracks active browsing time per domain down to the second.
+- **Global Pause & Resume**: Stop tracking all tabs globally and start again with a single toggle.
+- **Individual Deletion**: Remove today's tracked data for a specific website.
+- **Bulk Data Wiping**: Clear all tracked times for the day using the "Clear All" button.
+- **Excluded Domains (Blacklist)**: Stop tracking specific domains. Blocked domains are managed in the "Excluded Websites" panel where they can be restored back to tracking at any time.
+- **Daily Automatic Reset**: Automatically resets tracked stats at midnight for a fresh start.
+- **No Dependencies/AI**: Fully self-contained extension with no environment configurations or API keys required.
 
-### 2. Add your key
-Open `src/config.ts` and paste your key:
+## 🚀 Setup
 
-```ts
-export const OPENROUTER_API_KEY = "your-api-key-here";
-export const OPENROUTER_MODEL   = "google/gemma-4-31b-it:free";
-```
-
-You can pick any free model from [openrouter.ai/models](https://openrouter.ai/models?q=free).
-
-### 3. Build & load
+### 1. Install & Build
+First, install the development dependencies and compile the TypeScript sources:
 ```bash
 npm install
 npm run build
 ```
 
-Then open Chrome → `chrome://extensions/` → **Load unpacked** → select this folder.
+### 2. Load the Extension in Chrome
+1. Open Google Chrome and navigate to `chrome://extensions/`.
+2. Enable **Developer mode** using the toggle in the top-right corner.
+3. Click the **Load unpacked** button in the top-left corner.
+4. Select the project folder.
 
 ---
 
@@ -31,20 +33,19 @@ Then open Chrome → `chrome://extensions/` → **Load unpacked** → select thi
 
 ```
 ├── src/
-│   ├── config.ts       ← Add your API key here
-│   ├── popup.ts        ← Popup UI logic
-│   └── background.ts   ← Time tracking service worker
-├── dist/               ← Compiled JS (auto-generated)
+│   ├── popup.ts        ← Popup UI behavior & interaction logic
+│   └── background.ts   ← Main time tracker & state service worker
+├── dist/               ← Compiled JavaScript assets (built automatically)
 ├── public/
 │   └── tab-summary-icon.png
-├── index.html
-└── manifest.json
+├── index.html          ← Popup dashboard layout & styles
+└── manifest.json       ← Chrome Extension MV3 manifest config
 ```
 
 ## 🛠️ Development
 
-After editing any `.ts` file, re-run:
+When editing any `.ts` files inside the `src/` directory, re-run:
 ```bash
 npm run build
 ```
-Then click **Reload** on the extension in `chrome://extensions/`.
+Then click the **Reload (🔄)** button on the extension card in `chrome://extensions/`.
