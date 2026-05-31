@@ -1,4 +1,3 @@
-import { OPENROUTER_API_KEY, OPENROUTER_MODEL } from './config.js';
 function formatTime(ms) {
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
@@ -10,91 +9,28 @@ function formatTime(ms) {
         return `${minutes}m ${seconds}s`;
     return `${seconds}s`;
 }
-function formatTimeShort(ms) {
-    const totalSeconds = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${hours}h ${minutes}m ${seconds}s`;
-}
-async function analyzeWithAI(timeMap) {
-    const data = Object.entries(timeMap)
-        .map(([domain, ms]) => `${domain}: ${Math.round(ms / 1000)} seconds`)
-        .join('\n');
-    if (!data)
-        return null;
-    const prompt = `You are a productivity adviser. I will provide you with a user's web browsing data (domain and time spent).
-Categorize every single domain as "productive", "wasted", or "neutral", and provide a short piece of actionable advice based on their browsing habits.
-Data:
-${data}
-
-Respond ONLY with a valid JSON object in the exact following format. Do not include markdown tags like \`\`\`json.
-{
-  "advice": "string",
-  "categories": {
-    "domain.com": "productive" | "wasted" | "neutral"
-  }
-}`;
-    try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                model: OPENROUTER_MODEL,
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
-        const json = await response.json();
-        console.log("AI Response:", json);
-        if (json.error) {
-            console.error("OpenRouter Error:", json.error);
-            return {
-                advice: response.status === 429
-                    ? "Rate limit exceeded on free AI tier. Please wait a moment before trying again."
-                    : `API Error: ${json.error.message || 'Unknown error'}`,
-                categories: {}
-            };
-        }
-        if (!json.choices || !json.choices[0])
-            throw new Error("Invalid API response format");
-        const text = json.choices[0].message.content;
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match)
-            return JSON.parse(match[0]);
-        return JSON.parse(text);
-    }
-    catch (e) {
-        console.error("AI Analysis failed:", e);
-        return null;
-    }
-}
-// ── State shared between initial load and live ticker ──
+// State
 let baseTimeMap = {};
 let activeDomain = null;
 let activeStartTime = 0;
-let aiCategories = {};
+let isPaused = false;
+let stoppedDomains = [];
 let maxBaseTime = 1;
-/** Returns the live time map with active domain's elapsed time added */
 function getLiveTimeMap() {
     const live = { ...baseTimeMap };
-    if (activeDomain) {
+    if (activeDomain && !isPaused && !stoppedDomains.includes(activeDomain)) {
         const extra = Date.now() - activeStartTime;
         live[activeDomain] = (live[activeDomain] || 0) + extra;
     }
     return live;
 }
-/** Updates only time displays and progress bars — no DOM rebuild, no AI call */
 function tickTimes() {
     const live = getLiveTimeMap();
     const liveMax = Math.max(...Object.values(live), 1);
-    let productiveMs = 0;
-    let wastedMs = 0;
+    let totalMs = 0;
     for (const [domain, ms] of Object.entries(live)) {
-        // Update time label
-        const domainEl = document.getElementById(`domain-${domain}`);
+        totalMs += ms;
+        const domainEl = document.getElementById(`domain-${domain.replace(/\./g, '_')}`);
         if (domainEl) {
             const timeEl = domainEl.querySelector('.domain-time');
             if (timeEl)
@@ -103,35 +39,78 @@ function tickTimes() {
             if (bar)
                 bar.style.width = `${Math.max(2, (ms / liveMax) * 100)}%`;
         }
-        const cat = aiCategories[domain] ?? "neutral";
-        if (cat === 'productive')
-            productiveMs += ms;
-        if (cat === 'wasted')
-            wastedMs += ms;
     }
-    // Update stat cards
-    const statProd = document.getElementById('stat-productive');
-    const statWasted = document.getElementById('stat-wasted');
-    if (statProd)
-        statProd.textContent = formatTimeShort(productiveMs);
-    if (statWasted)
-        statWasted.textContent = formatTimeShort(wastedMs);
-    // Update score
-    const totalScoredMs = productiveMs + wastedMs;
-    const score = totalScoredMs > 0 ? Math.round((productiveMs / totalScoredMs) * 100) : 0;
-    const scoreBar = document.getElementById('score-bar');
-    const scoreText = document.getElementById('score-text');
-    if (scoreBar)
-        scoreBar.style.width = `${score}%`;
-    if (scoreText)
-        scoreText.textContent = `${score}%`;
+    const totalTimeEl = document.getElementById('total-time');
+    if (totalTimeEl)
+        totalTimeEl.textContent = formatTime(totalMs);
 }
 async function updatePopup() {
-    const result = await chrome.storage.local.get(['timeMap', 'trackerState']);
-    const trackerState = result.trackerState;
+    const result = await chrome.storage.local.get(['timeMap', 'trackerState', 'isPaused', 'stoppedDomains']);
     baseTimeMap = (result.timeMap || {});
+    const trackerState = result.trackerState;
     activeDomain = trackerState?.activeDomain ?? null;
     activeStartTime = trackerState?.startTime ?? Date.now();
+    isPaused = !!result.isPaused;
+    stoppedDomains = (result.stoppedDomains || []);
+    // Update Status Badge & Toggles
+    const statusBadge = document.getElementById('status-badge');
+    const statusText = document.getElementById('status-text');
+    const pauseToggleBtn = document.getElementById('btn-pause-toggle');
+    const pauseIcon = document.getElementById('pause-icon');
+    const pauseText = document.getElementById('pause-text');
+    if (statusBadge && statusText && pauseToggleBtn && pauseIcon && pauseText) {
+        if (isPaused) {
+            statusBadge.className = 'status-badge status-paused';
+            statusText.textContent = 'Paused';
+            pauseToggleBtn.className = 'btn btn-resume';
+            pauseIcon.textContent = '▶️';
+            pauseText.textContent = 'Resume';
+        }
+        else {
+            statusBadge.className = 'status-badge status-active';
+            statusText.textContent = 'Active';
+            pauseToggleBtn.className = 'btn btn-pause';
+            pauseIcon.textContent = '⏸️';
+            pauseText.textContent = 'Pause';
+        }
+    }
+    // Render Excluded list
+    const excludedSection = document.getElementById('excluded-section');
+    const excludedList = document.getElementById('excluded-list');
+    if (excludedSection && excludedList) {
+        if (stoppedDomains.length > 0) {
+            excludedSection.style.display = 'block';
+            excludedList.innerHTML = '';
+            stoppedDomains.forEach(domain => {
+                const item = document.createElement('div');
+                item.className = 'excluded-item';
+                item.innerHTML = `
+          <span class="excluded-name" title="${domain}">${domain}</span>
+          <button class="btn-restore" data-domain="${domain}">
+            <span>🔄</span> Restore
+          </button>
+        `;
+                excludedList.appendChild(item);
+            });
+            // Bind restore buttons
+            excludedList.querySelectorAll('.btn-restore').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const dom = e.currentTarget.getAttribute('data-domain');
+                    if (dom) {
+                        const result = await chrome.storage.local.get(['stoppedDomains']);
+                        const currentStopped = (result.stoppedDomains || []);
+                        const updated = currentStopped.filter((d) => d !== dom);
+                        await chrome.storage.local.set({ stoppedDomains: updated });
+                        updatePopup();
+                    }
+                });
+            });
+        }
+        else {
+            excludedSection.style.display = 'none';
+        }
+    }
+    // Render Tracked Domains
     const liveTimeMap = getLiveTimeMap();
     const sortedDomains = Object.entries(liveTimeMap).sort((a, b) => b[1] - a[1]);
     const domainsList = document.getElementById('domains');
@@ -139,28 +118,32 @@ async function updatePopup() {
         return;
     if (sortedDomains.length === 0) {
         domainsList.innerHTML = '<div class="empty-state">No time tracked yet. Start browsing!</div>';
+        const totalTimeEl = document.getElementById('total-time');
+        if (totalTimeEl)
+            totalTimeEl.textContent = '0s';
         return;
     }
-    const insightsText = document.getElementById('insights-text');
-    if (insightsText)
-        insightsText.textContent = "AI is analyzing your browsing data...";
-    // Build domain list once
     maxBaseTime = sortedDomains[0][1] || 1;
     domainsList.innerHTML = '';
     for (const [domain, ms] of sortedDomains) {
         const li = document.createElement('li');
         li.className = 'domain-item';
-        li.id = `domain-${domain}`;
+        li.id = `domain-${domain.replace(/\./g, '_')}`;
         const percentage = Math.max(2, (ms / maxBaseTime) * 100);
         const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
         li.innerHTML = `
       <div class="domain-header">
         <div class="domain-name">
           <img src="${faviconUrl}" alt="" onerror="this.style.display='none'">
-          ${domain}
-          <span class="domain-category" id="cat-${domain}">...</span>
+          <span title="${domain}">${domain}</span>
         </div>
-        <div class="domain-time">${formatTime(ms)}</div>
+        <div class="domain-right">
+          <span class="domain-time">${formatTime(ms)}</span>
+          <div class="domain-actions">
+            <button class="action-btn action-stop" data-domain="${domain}" title="Stop tracking this website">🚫</button>
+            <button class="action-btn action-delete" data-domain="${domain}" title="Delete tracked time">🗑️</button>
+          </div>
+        </div>
       </div>
       <div class="progress-track">
         <div class="progress-bar" style="width: ${percentage}%"></div>
@@ -168,29 +151,101 @@ async function updatePopup() {
     `;
         domainsList.appendChild(li);
     }
-    // Start live ticker (every second)
-    setInterval(tickTimes, 1000);
-    // Fetch AI analysis (one time)
-    const aiResult = await analyzeWithAI(liveTimeMap);
-    if (aiResult) {
-        console.log("AI Result:", aiResult);
-        aiCategories = aiResult.categories ?? {};
-        // Apply category labels
-        for (const [domain, cat] of Object.entries(aiCategories)) {
-            const catEl = document.getElementById(`cat-${domain}`);
-            if (catEl) {
-                catEl.textContent = cat;
-                catEl.className = `domain-category cat-${cat}`;
+    // Bind individual actions
+    domainsList.querySelectorAll('.action-delete').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const dom = e.currentTarget.getAttribute('data-domain');
+            if (dom) {
+                const confirmDelete = confirm(`Are you sure you want to delete tracked time for ${dom} today?`);
+                if (!confirmDelete)
+                    return;
+                const result = await chrome.storage.local.get(['timeMap', 'trackerState']);
+                const timeMap = (result.timeMap || {});
+                const trackerState = result.trackerState;
+                delete timeMap[dom];
+                // If the deleted domain was active, reset activeStartTime
+                if (trackerState && trackerState.activeDomain === dom) {
+                    trackerState.startTime = Date.now();
+                }
+                await chrome.storage.local.set({ timeMap, trackerState });
+                updatePopup();
             }
-        }
-        if (insightsText && aiResult.advice)
-            insightsText.textContent = aiResult.advice;
-    }
-    else {
-        if (insightsText)
-            insightsText.textContent = "Could not fetch AI insights. Please try again.";
-    }
+        });
+    });
+    domainsList.querySelectorAll('.action-stop').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const dom = e.currentTarget.getAttribute('data-domain');
+            if (dom) {
+                const confirmStop = confirm(`Stop tracking ${dom}? Past data will be removed and it will be excluded in the future.`);
+                if (!confirmStop)
+                    return;
+                const result = await chrome.storage.local.get(['timeMap', 'trackerState', 'stoppedDomains']);
+                const timeMap = (result.timeMap || {});
+                const trackerState = result.trackerState;
+                const stoppedDomains = (result.stoppedDomains || []);
+                // Remove from list
+                delete timeMap[dom];
+                // Add to stopped domains
+                if (!stoppedDomains.includes(dom)) {
+                    stoppedDomains.push(dom);
+                }
+                // If the stopped domain was active, set activeDomain to null
+                if (trackerState && trackerState.activeDomain === dom) {
+                    trackerState.activeDomain = null;
+                    trackerState.startTime = Date.now();
+                }
+                await chrome.storage.local.set({ timeMap, trackerState, stoppedDomains });
+                updatePopup();
+            }
+        });
+    });
+    tickTimes();
 }
+// Bind Global controls
 document.addEventListener('DOMContentLoaded', () => {
     updatePopup();
+    setInterval(tickTimes, 1000);
+    // Pause toggle
+    const pauseToggleBtn = document.getElementById('btn-pause-toggle');
+    if (pauseToggleBtn) {
+        pauseToggleBtn.addEventListener('click', async () => {
+            const result = await chrome.storage.local.get(['isPaused']);
+            const nextState = !result.isPaused;
+            await chrome.storage.local.set({ isPaused: nextState });
+            updatePopup();
+        });
+    }
+    // Clear all
+    const clearAllBtn = document.getElementById('btn-clear-all');
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', async () => {
+            const confirmClear = confirm('Are you sure you want to clear all tracked time data today? This cannot be undone.');
+            if (!confirmClear)
+                return;
+            const result = await chrome.storage.local.get(['trackerState']);
+            const trackerState = result.trackerState;
+            if (trackerState) {
+                trackerState.startTime = Date.now();
+            }
+            await chrome.storage.local.set({
+                timeMap: {},
+                trackerState: trackerState || { activeDomain: null, startTime: Date.now() }
+            });
+            updatePopup();
+        });
+    }
 });
+// Reactively refresh when storage changes (e.g. background records new time or day resets)
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && (changes.timeMap || changes.trackerState)) {
+        chrome.storage.local.get(['timeMap', 'trackerState']).then(result => {
+            baseTimeMap = (result.timeMap || {});
+            const trackerState = result.trackerState;
+            activeDomain = trackerState?.activeDomain ?? null;
+            activeStartTime = trackerState?.startTime ?? Date.now();
+        });
+    }
+});
+export {};

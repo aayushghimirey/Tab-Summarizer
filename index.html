@@ -12,10 +12,13 @@
       --text: #f8fafc;
       --text-muted: #94a3b8;
       --border: #334155;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
     }
 
     body {
-      width: 340px;
+      width: 350px;
       margin: 0;
       padding: 0;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -24,9 +27,12 @@
     }
 
     .header {
-      padding: 20px;
+      padding: 16px 20px;
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       position: relative;
       overflow: hidden;
     }
@@ -48,8 +54,8 @@
       100% { transform: scale(1.1); }
     }
 
-    h1 {
-      font-size: 18px;
+    .header-title {
+      font-size: 16px;
       font-weight: 600;
       margin: 0;
       display: flex;
@@ -59,14 +65,135 @@
       z-index: 1;
     }
 
-    h1 svg {
-      width: 20px;
-      height: 20px;
-      color: var(--primary);
+    .status-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-active {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-paused {
+      background: rgba(249, 115, 22, 0.15);
+      color: #f97316;
+      border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .status-active .status-dot {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .status-paused .status-dot {
+      background: #f97316;
+    }
+
+    .stats-panel {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(30, 41, 59, 0.5);
+    }
+
+    .total-time-card {
+      text-align: center;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+
+    .total-time-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .total-time-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .global-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      border: none;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-pause {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-pause:hover {
+      background: #2563eb;
+    }
+
+    .btn-resume {
+      background: #f97316;
+      color: white;
+    }
+
+    .btn-resume:hover {
+      background: #ea580c;
+    }
+
+    .btn-clear {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .btn-clear:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
     }
 
     .container {
       padding: 16px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin: 0 0 12px 0;
     }
 
     #domains {
@@ -75,26 +202,23 @@
       margin: 0;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
 
     .domain-item {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 14px;
+      padding: 12px 14px;
       display: flex;
       flex-direction: column;
       gap: 8px;
       transition: all 0.2s ease;
-      position: relative;
-      overflow: hidden;
     }
 
     .domain-item:hover {
-      transform: translateY(-2px);
       border-color: var(--primary);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transform: translateY(-1px);
     }
 
     .domain-header {
@@ -105,13 +229,14 @@
 
     .domain-name {
       font-weight: 500;
-      font-size: 14px;
+      font-size: 13.5px;
       display: flex;
       align-items: center;
       gap: 8px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      max-width: 170px;
     }
     
     .domain-name img {
@@ -120,29 +245,54 @@
       border-radius: 4px;
     }
 
+    .domain-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .domain-time {
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 600;
       color: var(--primary);
       background: rgba(59, 130, 246, 0.1);
-      padding: 4px 8px;
-      border-radius: 6px;
-      white-space: nowrap;
+      padding: 3px 6px;
+      border-radius: 5px;
     }
 
-    .domain-category {
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-left: 8px;
+    .domain-actions {
+      display: flex;
+      gap: 4px;
     }
-    
-    .cat-productive { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-    .cat-wasted { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-    .cat-neutral { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+
+    .action-btn {
+      background: none;
+      border: none;
+      font-size: 13px;
+      padding: 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.6;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .action-delete:hover {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .action-stop:hover {
+      color: var(--warning);
+      background: rgba(245, 158, 11, 0.1);
+    }
 
     .progress-track {
       width: 100%;
@@ -158,150 +308,108 @@
       border-radius: 2px;
       transition: width 0.3s ease;
     }
-    
+
     .empty-state {
       text-align: center;
-      padding: 30px 10px;
+      padding: 24px 0;
       color: var(--text-muted);
-      font-size: 14px;
+      font-size: 13px;
     }
 
-    .analytics-panel {
+    /* Excluded List styles */
+    .excluded-panel {
+      margin-top: 8px;
+      border-top: 1px solid var(--border);
       padding: 16px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.4);
     }
-    
-    .stats-row {
+
+    .excluded-list {
       display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    
-    .stat-card {
-      flex: 1;
-      padding: 12px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border);
-    }
-    
-    .stat-label {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-    
-    .stat-value {
-      font-size: 18px;
-      font-weight: 600;
-    }
-    
-    .productive-stat .stat-value { color: #10b981; }
-    .wasted-stat .stat-value { color: #ef4444; }
-    
-    .score-container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .score-label {
-      font-size: 13px;
-      font-weight: 500;
-      flex-shrink: 0;
-    }
-    
-    .score-bar-bg {
-      flex: 1;
-      height: 8px;
-      background: var(--border);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    
-    .score-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #ef4444, #eab308, #10b981);
-      width: 0%;
-      transition: width 0.5s ease;
-      border-radius: 4px;
-    }
-    
-    .score-value {
-      font-size: 14px;
-      font-weight: 600;
-      width: 40px;
-      text-align: right;
-    }
-    
-    .insights-card {
-      margin: 16px;
-      padding: 16px;
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.2);
-      border-radius: 12px;
-    }
-    
-    .insights-title {
-      display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--primary);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      margin-top: 8px;
     }
-    
-    .insights-text {
-      font-size: 13.5px;
-      line-height: 1.5;
-      color: var(--text);
+
+    .excluded-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(30, 41, 59, 0.4);
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px dashed var(--border);
+      font-size: 12.5px;
+    }
+
+    .excluded-name {
+      color: var(--text-muted);
+      text-decoration: line-through;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 240px;
+    }
+
+    .btn-restore {
+      background: none;
+      border: none;
+      color: var(--success);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-weight: 500;
+    }
+
+    .btn-restore:hover {
+      background: rgba(16, 185, 129, 0.1);
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>
-      <img src="public/tab-summary-icon.png" alt="Logo" style="width: 24px; height: 24px; border-radius: 4px;">
+    <h1 class="header-title">
+      <img src="public/tab-summary-icon.png" alt="Logo" style="width: 22px; height: 22px; border-radius: 4px;">
       Time Tracker
     </h1>
+    <div id="status-badge" class="status-badge status-active">
+      <span class="status-dot"></span>
+      <span id="status-text">Active</span>
+    </div>
   </div>
   
-  <div class="analytics-panel">
-    <div class="stats-row">
-      <div class="stat-card productive-stat">
-        <div class="stat-label">Productive</div>
-        <div class="stat-value" id="stat-productive">0h 0m</div>
-      </div>
-      <div class="stat-card wasted-stat">
-        <div class="stat-label">Wasted</div>
-        <div class="stat-value" id="stat-wasted">0h 0m</div>
-      </div>
+  <div class="stats-panel">
+    <div class="total-time-card">
+      <div class="total-time-label">Total Time Tracked</div>
+      <div class="total-time-value" id="total-time">00s</div>
     </div>
     
-    <div class="score-container">
-      <div class="score-label">Score</div>
-      <div class="score-bar-bg">
-        <div class="score-bar-fill" id="score-bar"></div>
-      </div>
-      <div class="score-value" id="score-text">0%</div>
+    <div class="global-controls">
+      <button id="btn-pause-toggle" class="btn btn-pause">
+        <span id="pause-icon">⏸️</span>
+        <span id="pause-text">Pause</span>
+      </button>
+      <button id="btn-clear-all" class="btn btn-clear">
+        <span>🗑️</span>
+        <span>Clear All</span>
+      </button>
     </div>
-  </div>
-
-  <div class="insights-card">
-    <div class="insights-title">
-      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-      AI Insights
-    </div>
-    <div class="insights-text" id="insights-text">Collecting data to generate insights...</div>
   </div>
 
   <div class="container">
+    <h2 class="section-title">Tracked Websites</h2>
     <ul id="domains"></ul>
   </div>
+
+  <div id="excluded-section" class="excluded-panel" style="display: none;">
+    <h2 class="section-title">Excluded Websites</h2>
+    <div id="excluded-list" class="excluded-list"></div>
+  </div>
+
   <script type="module" src="dist/popup.js"></script>
 </body>
 </html>

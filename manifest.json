@@ -3,7 +3,6 @@
   "name": "Time Tracker",
   "version": "1.0",
   "permissions": ["tabs", "storage", "idle"],
-  "host_permissions": ["https://openrouter.ai/*"],
   "icons": {
     "16": "public/tab-summary-icon.png",
     "32": "public/tab-summary-icon.png",

@@ -45,28 +45,47 @@ async function updateTime(newDomain: string | null) {
   // Always check for a new day before recording time
   await checkAndResetForNewDay();
 
-  const result = await chrome.storage.local.get(['trackerState', 'timeMap']);
+  const result = await chrome.storage.local.get(['trackerState', 'timeMap', 'isPaused', 'stoppedDomains']);
   const trackerState = result.trackerState as TrackerState | undefined;
   const timeMap = (result.timeMap || {}) as Record<string, number>;
+  const isPaused = !!result.isPaused;
+  const stoppedDomains = (result.stoppedDomains || []) as string[];
 
   const now = Date.now();
 
+  // If tracking was active, save the elapsed time
   if (trackerState && trackerState.activeDomain) {
     const timeSpent = now - trackerState.startTime;
     const domain = trackerState.activeDomain;
-    timeMap[domain] = (timeMap[domain] || 0) + timeSpent;
-    await chrome.storage.local.set({ timeMap });
+    
+    // Save only if not paused and not blacklisted
+    if (!isPaused && !stoppedDomains.includes(domain)) {
+      timeMap[domain] = (timeMap[domain] || 0) + timeSpent;
+      await chrome.storage.local.set({ timeMap });
+    }
+  }
+
+  // Determine the next domain to track
+  let domainToSet = newDomain;
+  if (isPaused || (newDomain && stoppedDomains.includes(newDomain))) {
+    domainToSet = null;
   }
 
   await chrome.storage.local.set({
     trackerState: {
-      activeDomain: newDomain,
+      activeDomain: domainToSet,
       startTime: now
     }
   });
 }
 
 async function handleTabChange() {
+  const result = await chrome.storage.local.get(['isPaused']);
+  if (result.isPaused) {
+    await updateTime(null);
+    return;
+  }
+
   const state = await chrome.idle.queryState(IDLE_THRESHOLD);
   if (state === 'active') {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -76,6 +95,15 @@ async function handleTabChange() {
     await updateTime(null);
   }
 }
+
+// Listen to storage changes to react instantly when popup changes pause/blacklist state
+chrome.storage.onChanged.addListener(async (changes, namespace) => {
+  if (namespace === 'local') {
+    if (changes.isPaused || changes.stoppedDomains) {
+      await handleTabChange();
+    }
+  }
+});
 
 // On extension startup, initialise lastDate if missing
 chrome.runtime.onStartup.addListener(async () => {
