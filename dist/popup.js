@@ -148,7 +148,7 @@ async function updatePopup() {
       <div class="domain-header">
         <div class="domain-name">
           <img src="${faviconUrl}" alt="" onerror="this.style.display='none'">
-          <span title="${domain}">${domain}</span>
+          <span id="domain-title" title="${domain}">${domain}</span>
         </div>
         <div class="domain-right">
           <span class="domain-time">${formatTime(ms)}</span>
