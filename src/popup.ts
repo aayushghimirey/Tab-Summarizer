@@ -48,7 +48,7 @@ function tickTimes() {
 }
 
 async function updatePopup() {
-  const result = await chrome.storage.local.get(['timeMap', 'trackerState', 'isPaused', 'stoppedDomains']);
+  const result = await chrome.storage.local.get(['timeMap', 'trackerState', 'isPaused', 'stoppedDomains', 'theme']);
   
   baseTimeMap = (result.timeMap || {}) as Record<string, number>;
   const trackerState = result.trackerState as { activeDomain: string | null; startTime: number } | undefined;
@@ -56,6 +56,17 @@ async function updatePopup() {
   activeStartTime = trackerState?.startTime ?? Date.now();
   isPaused = !!result.isPaused;
   stoppedDomains = (result.stoppedDomains || []) as string[];
+
+  // Update Theme
+  const isLightTheme = result.theme === 'light';
+  const themeBtn = document.getElementById('btn-theme-toggle');
+  if (isLightTheme) {
+    document.body.classList.add('light-theme');
+    if (themeBtn) themeBtn.textContent = '☀️';
+  } else {
+    document.body.classList.remove('light-theme');
+    if (themeBtn) themeBtn.textContent = '🌙';
+  }
 
   // Update Status Badge & Toggles
   const statusBadge = document.getElementById('status-badge');
@@ -227,6 +238,16 @@ async function updatePopup() {
 document.addEventListener('DOMContentLoaded', () => {
   updatePopup();
   setInterval(tickTimes, 1000);
+
+  // Theme toggle
+  const themeBtn = document.getElementById('btn-theme-toggle');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', async () => {
+      const isLight = document.body.classList.toggle('light-theme');
+      themeBtn.textContent = isLight ? '☀️' : '🌙';
+      await chrome.storage.local.set({ theme: isLight ? 'light' : 'dark' });
+    });
+  }
 
   // Pause toggle
   const pauseToggleBtn = document.getElementById('btn-pause-toggle');
